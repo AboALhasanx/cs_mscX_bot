@@ -167,3 +167,118 @@ class QuizRepository:
             ))
         
         return sessions
+
+class StatsRepository:
+    """مستودع الإحصائيات"""
+    
+    def __init__(self, db_manager):
+        self.db = db_manager
+    
+    def get_user_stats(self, user_id: int) -> dict:
+        """الحصول على إحصائيات المستخدم الكاملة"""
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # إحصائيات عامة
+        cursor.execute('''
+            SELECT 
+                total_questions,
+                correct_answers,
+                join_date
+            FROM users 
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        user_row = cursor.fetchone()
+        
+        if not user_row:
+            conn.close()
+            return None
+        
+        # عدد الاختبارات
+        cursor.execute('''
+            SELECT COUNT(*) as quiz_count
+            FROM quiz_sessions 
+            WHERE user_id = ? AND end_time IS NOT NULL
+        ''', (user_id,))
+        
+        quiz_count = cursor.fetchone()['quiz_count']
+        
+        # أفضل نتيجة
+        cursor.execute('''
+            SELECT 
+                MAX(CAST(score AS FLOAT) / total_questions * 100) as best_score
+            FROM quiz_sessions 
+            WHERE user_id = ? AND end_time IS NOT NULL
+        ''', (user_id,))
+        
+        best_score = cursor.fetchone()['best_score'] or 0
+        
+        # إحصائيات حسب المادة
+        cursor.execute('''
+            SELECT 
+                subject,
+                COUNT(*) as count,
+                AVG(CAST(score AS FLOAT) / total_questions * 100) as avg_score
+            FROM quiz_sessions 
+            WHERE user_id = ? AND end_time IS NOT NULL
+            GROUP BY subject
+        ''', (user_id,))
+        
+        subject_stats = cursor.fetchall()
+        
+        conn.close()
+        
+        # حساب نسبة الدقة
+        total_q = user_row['total_questions']
+        correct_a = user_row['correct_answers']
+        accuracy = (correct_a / total_q * 100) if total_q > 0 else 0
+        
+        return {
+            'total_questions': total_q,
+            'correct_answers': correct_a,
+            'accuracy': accuracy,
+            'quiz_count': quiz_count,
+            'best_score': best_score,
+            'join_date': user_row['join_date'],
+            'subject_stats': [dict(row) for row in subject_stats]
+        }
+    
+    def get_subject_progress(self, user_id: int) -> dict:
+        """الحصول على التقدم في كل مادة"""
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                subject,
+                chapter,
+                COUNT(*) as attempts,
+                AVG(CAST(score AS FLOAT) / total_questions * 100) as avg_score,
+                MAX(score) as best_score,
+                MAX(total_questions) as total_questions
+            FROM quiz_sessions 
+            WHERE user_id = ? AND end_time IS NOT NULL
+            GROUP BY subject, chapter
+            ORDER BY subject, chapter
+        ''', (user_id,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        # تنظيم البيانات حسب المادة
+        progress = {}
+        for row in rows:
+            subject = row['subject']
+            if subject not in progress:
+                progress[subject] = []
+            
+            progress[subject].append({
+                'chapter': row['chapter'],
+                'attempts': row['attempts'],
+                'avg_score': round(row['avg_score'], 1),
+                'best_score': row['best_score'],
+                'total_questions': row['total_questions']
+            })
+        
+        return progress

@@ -1,30 +1,40 @@
+"""
+معالج الاختبارات
+"""
+
 from telegram import Update, Poll
 from telegram.ext import ContextTypes
 import config
 from src.services.question_service import QuestionService
 from src.database.db_manager import DatabaseManager
 from src.database.repositories import UserRepository, QuizRepository
-import config
+import logging
+import asyncio
 
-# إنشاء قاعدة البيانات
-db_manager = DatabaseManager(config.DATABASE_PATH)
-user_repo = UserRepository(db_manager)
-quiz_repo = QuizRepository(db_manager)
+logger = logging.getLogger(__name__)
 
 # خدمة الأسئلة
 question_service = QuestionService(config.QUESTIONS_DIR)
+
+# قاعدة البيانات
+db_manager = DatabaseManager(config.DATABASE_PATH)
+user_repo = UserRepository(db_manager)
+quiz_repo = QuizRepository(db_manager)
 
 # تخزين جلسات المستخدمين (مؤقت في الذاكرة)
 user_sessions = {}
 
 async def start_quiz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """بدء اختبار جديد"""
+    """
+    معالج أمر /start_quiz (الاختبار التجريبي القديم)
+    هذا للتوافق مع الإصدار السابق
+    """
     user_id = update.effective_user.id
     username = update.effective_user.username
     first_name = update.effective_user.first_name
     
     try:
-        # التأكد من وجود المستخدم في قاعدة البيانات
+        # التأكد من وجود المستخدم
         user = user_repo.get_user(user_id)
         if not user:
             user = user_repo.create_user(user_id, username, first_name)
@@ -50,7 +60,9 @@ async def start_quiz_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             'questions': selected_questions,
             'current_question': 0,
             'score': 0,
-            'total': len(selected_questions)
+            'total': len(selected_questions),
+            'subject': 'test',
+            'chapter': 'general'
         }
         
         start_msg = config.QUIZ_START_MESSAGE.format(total=len(selected_questions))
@@ -61,6 +73,86 @@ async def start_quiz_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.error(f"خطأ في بدء الاختبار: {e}")
         await update.message.reply_text(f"❌ حدث خطأ: {str(e)}")
+
+async def start_quiz_for_subject(query, context: ContextTypes.DEFAULT_TYPE, 
+                                 subject_key: str, chapter_key: str):
+    """
+    بدء اختبار لمادة وفصل محددين
+    يُستدعى من معالج الأزرار
+    """
+    from src.constants.subjects import get_subject_name, get_chapter_name
+    
+    user_id = query.from_user.id
+    username = query.from_user.username
+    first_name = query.from_user.first_name
+    
+    try:
+        # التأكد من وجود المستخدم
+        user = user_repo.get_user(user_id)
+        if not user:
+            user = user_repo.create_user(user_id, username, first_name)
+        
+        # تحميل الأسئلة (حالياً من test_quiz.json)
+        # TODO: في المستقبل - تحميل من ملف خاص بالمادة والفصل
+        questions = question_service.load_questions('test_quiz.json')
+        selected_questions = question_service.get_random_questions(
+            questions, 
+            config.QUESTIONS_PER_QUIZ
+        )
+        
+        # إنشاء جلسة
+        session_id = quiz_repo.create_session(
+            user_id=user_id,
+            subject=subject_key,
+            chapter=chapter_key,
+            total_questions=len(selected_questions)
+        )
+        
+        # حفظ الجلسة
+        user_sessions[user_id] = {
+            'session_id': session_id,
+            'questions': selected_questions,
+            'current_question': 0,
+            'score': 0,
+            'total': len(selected_questions),
+            'subject': subject_key,
+            'chapter': chapter_key
+        }
+        
+        # رسالة البداية
+        subject_name = get_subject_name(subject_key)
+        chapter_name = get_chapter_name(subject_key, chapter_key)
+        
+        start_msg = f"""
+🚀 **بدأ الاختبار!**
+
+📚 المادة: {subject_name}
+📖 {chapter_name}
+🔢 عدد الأسئلة: {len(selected_questions)}
+
+جاهز؟ السؤال الأول قادم...
+"""
+        
+        await query.edit_message_text(start_msg)
+        
+        # الانتظار قليلاً
+        await asyncio.sleep(1)
+        
+        # إرسال السؤال الأول
+        first_q = selected_questions[0]
+        await context.bot.send_poll(
+            chat_id=user_id,
+            question=f"❓ السؤال 1/{len(selected_questions)}:\n\n{first_q['question']}",
+            options=first_q['options'],
+            type=Poll.QUIZ,
+            correct_option_id=first_q['correct_option_id'],
+            explanation=first_q.get('explanation', ''),
+            is_anonymous=False
+        )
+        
+    except Exception as e:
+        logger.error(f"خطأ في بدء الاختبار: {e}")
+        await query.edit_message_text(f"❌ حدث خطأ: {str(e)}")
 
 async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int):
     """
@@ -90,7 +182,7 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE, user
         correct_option_id=question_data['correct_option_id'],
         explanation=question_data.get('explanation', ''),
         is_anonymous=False,
-        open_period=60  # مفتوح لمدة 60 ثانية
+        open_period=60
     )
 
 async def handle_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -126,8 +218,7 @@ async def handle_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         correct_answer=correct_answer,
         is_correct=is_correct
     )
-
-
+    
     # الانتقال للسؤال التالي
     session['current_question'] += 1
     
@@ -140,8 +231,7 @@ async def handle_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         text=f"{emoji} {text}\n\nالسؤال التالي قادم..."
     )
     
-    # الانتظار ثانية واحدة
-    import asyncio
+    # الانتظار ثانية
     await asyncio.sleep(1.5)
     
     # إرسال السؤال التالي أو إنهاء الاختبار
@@ -174,7 +264,11 @@ async def finish_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE, user_i
     total = session['total']
     percentage = round((score / total) * 100)
     
-    # تحديد الرسالة بناءً على النتيجة
+    # تحديث قاعدة البيانات
+    quiz_repo.finish_session(session['session_id'], score)
+    user_repo.update_stats(user_id, total, score)
+    
+    # تحديد الرسالة
     if score >= config.PASSING_SCORE:
         result_emoji = "🎉"
         result_text = "ممتاز! لقد نجحت في الاختبار"
@@ -195,11 +289,6 @@ async def finish_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE, user_i
         text=result_message
     )
     
-    # تحديث قاعدة البيانات
-    quiz_repo.finish_session(session['session_id'], score)
-    user_repo.update_stats(user_id, total, score)
-
-    
     # حذف الجلسة
     del user_sessions[user_id]
 
@@ -216,6 +305,11 @@ async def finish_quiz_after_answer(context: ContextTypes.DEFAULT_TYPE, user_id: 
     total = session['total']
     percentage = round((score / total) * 100)
     
+    # تحديث قاعدة البيانات
+    quiz_repo.finish_session(session['session_id'], score)
+    user_repo.update_stats(user_id, total, score)
+    
+    # تحديد الرسالة
     if score >= config.PASSING_SCORE:
         result_emoji = "🎉"
         result_text = "ممتاز! لقد نجحت في الاختبار"
@@ -236,4 +330,5 @@ async def finish_quiz_after_answer(context: ContextTypes.DEFAULT_TYPE, user_id: 
         text=result_message
     )
     
+    # حذف الجلسة
     del user_sessions[user_id]
