@@ -1,0 +1,57 @@
+[
+  {
+    "question": "What is the time complexity of Binary Search?",
+    "options": [
+      "O(n)",
+      "O(log n)",
+      "O(n²)",
+      "O(1)"
+    ],
+    "correct_option_id": 1,
+    "explanation": "Binary Search divides the search space in half at each step, resulting in logarithmic time complexity O(log n)."
+  },
+  {
+    "question": "Which data structure uses LIFO (Last In First Out)?",
+    "options": [
+      "Queue",
+      "Stack",
+      "Array",
+      "Linked List"
+    ],
+    "correct_option_id": 1,
+    "explanation": "Stack follows the LIFO principle: the last element added is the first one to be removed."
+  },
+  {
+    "question": "What does TCP stand for in networking?",
+    "options": [
+      "Transfer Control Protocol",
+      "Transmission Control Protocol",
+      "Transport Connection Protocol",
+      "Terminal Control Protocol"
+    ],
+    "correct_option_id": 1,
+    "explanation": "TCP stands for Transmission Control Protocol, which ensures reliable data transmission over networks."
+  },
+  {
+    "question": "In OOP, what is encapsulation?",
+    "options": [
+      "Hiding implementation details",
+      "Inheriting from parent class",
+      "Creating multiple instances",
+      "Overloading operators"
+    ],
+    "correct_option_id": 0,
+    "explanation": "Encapsulation is the concept of bundling data and methods together and hiding internal details from the outside world."
+  },
+  {
+    "question": "Which sorting algorithm has O(n log n) worst-case time complexity?",
+    "options": [
+      "Bubble Sort",
+      "Quick Sort",
+      "Merge Sort",
+      "Selection Sort"
+    ],
+    "correct_option_id": 2,
+    "explanation": "Merge Sort always has O(n log n) time complexity, even in the worst case, unlike Quick Sort which can degrade to O(n²)."
+  }
+]
