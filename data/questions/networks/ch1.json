@@ -1,0 +1,57 @@
+[
+  {
+    "question": "What is the definition of Artificial Intelligence according to the Turing Test?",
+    "options": [
+      "A machine that can think like a human",
+      "A machine that acts like a human and passes the Turing Test",
+      "A machine that can learn from data",
+      "A machine that uses neural networks"
+    ],
+    "correct_option_id": 1,
+    "explanation": "The Turing Test defines AI as a machine's ability to exhibit intelligent behavior indistinguishable from that of a human."
+  },
+  {
+    "question": "Which of the following is a characteristic of a rational agent?",
+    "options": [
+      "Acts randomly",
+      "Maximizes expected utility",
+      "Always makes optimal decisions",
+      "Has emotions"
+    ],
+    "correct_option_id": 1,
+    "explanation": "A rational agent acts to maximize its expected utility based on its knowledge and perceptions."
+  },
+  {
+    "question": "What is the main goal of AI?",
+    "options": [
+      "To replace humans",
+      "To create intelligent systems that can perform tasks requiring human intelligence",
+      "To make computers faster",
+      "To store data efficiently"
+    ],
+    "correct_option_id": 1,
+    "explanation": "AI aims to create systems capable of performing tasks that typically require human intelligence, such as reasoning, learning, and problem-solving."
+  },
+  {
+    "question": "Which approach focuses on building systems that think like humans?",
+    "options": [
+      "Acting rationally",
+      "Thinking rationally",
+      "Thinking humanly (Cognitive Science approach)",
+      "Acting humanly"
+    ],
+    "correct_option_id": 2,
+    "explanation": "The Cognitive Science approach aims to model human thought processes and build systems that think like humans."
+  },
+  {
+    "question": "What is the difference between weak AI and strong AI?",
+    "options": [
+      "Weak AI is slower than strong AI",
+      "Weak AI performs specific tasks; Strong AI has general intelligence",
+      "Weak AI uses less memory",
+      "There is no difference"
+    ],
+    "correct_option_id": 1,
+    "explanation": "Weak (or narrow) AI is designed for specific tasks, while Strong (or general) AI would have human-level intelligence across all domains."
+  }
+]
