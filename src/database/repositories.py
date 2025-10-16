@@ -66,22 +66,60 @@ class UserRepository:
             )
         return None
     
-    def update_stats(self, user_id: int, questions_count: int, correct_count: int):
-        """تحديث إحصائيات المستخدم"""
+    def update_stats(self, user_id: int, questions_count: int, correct_count: int, xp_earned: int = 0):
+        """
+        تحديث إحصائيات المستخدم + XP
+        """
         conn = self.db.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
             UPDATE users 
             SET total_questions = total_questions + ?,
-                correct_answers = correct_answers + ?
+                correct_answers = correct_answers + ?,
+                xp = xp + ?
             WHERE user_id = ?
-        ''', (questions_count, correct_count, user_id))
+        ''', (questions_count, correct_count, xp_earned, user_id))
         
         conn.commit()
         conn.close()
         
-        logger.info(f"✅ تم تحديث إحصائيات المستخدم {user_id}")
+        logger.info(f"✅ تم تحديث إحصائيات المستخدم {user_id} (+{xp_earned} XP)")
+
+    def add_xp(self, user_id: int, xp_amount: int) -> dict:
+        """
+        إضافة XP للمستخدم والتحقق من ترقية المستوى
+        
+        Returns:
+            dict: {old_level, new_level, leveled_up, xp_gained}
+        """
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # الحصول على XP الحالي
+        cursor.execute('SELECT xp FROM users WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        old_xp = result['xp'] if result else 0
+        
+        # إضافة XP
+        new_xp = old_xp + xp_amount
+        cursor.execute('UPDATE users SET xp = ? WHERE user_id = ?', (new_xp, user_id))
+        conn.commit()
+        conn.close()
+        
+        # التحقق من الترقية
+        from config import get_level_from_xp
+        old_level = get_level_from_xp(old_xp)['level']
+        new_level = get_level_from_xp(new_xp)['level']
+        
+        return {
+            'old_level': old_level,
+            'new_level': new_level,
+            'leveled_up': new_level > old_level,
+            'xp_gained': xp_amount,
+            'total_xp': new_xp
+        }
+
 
 class QuizRepository:
     """مستودع الاختبارات"""
@@ -174,6 +212,56 @@ class StatsRepository:
     def __init__(self, db_manager):
         self.db = db_manager
     
+    def get_weekly_stats(self, user_id: int) -> dict:
+        """
+        الحصول على إحصائيات آخر 7 أيام
+        
+        Returns:
+            dict: {total_questions, correct_answers, accuracy, active_days}
+        """
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # عدد الأسئلة والإجابات الصحيحة هذا الأسبوع
+        cursor.execute('''
+            SELECT 
+                COUNT(*) as total_attempts,
+                SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct,
+                COUNT(DISTINCT DATE(timestamp)) as active_days
+            FROM question_attempts qa
+            JOIN quiz_sessions qs ON qa.session_id = qs.session_id
+            WHERE qs.user_id = ? 
+            AND qa.timestamp >= datetime('now', '-7 days')
+        ''', (user_id,))
+        
+        result = cursor.fetchone()
+        
+        # عدد الاختبارات المكتملة هذا الأسبوع
+        cursor.execute('''
+            SELECT COUNT(*) as quiz_count
+            FROM quiz_sessions
+            WHERE user_id = ? 
+            AND end_time IS NOT NULL
+            AND start_time >= datetime('now', '-7 days')
+        ''', (user_id,))
+        
+        quiz_result = cursor.fetchone()
+        
+        conn.close()
+        
+        total = result['total_attempts'] or 0
+        correct = result['correct'] or 0
+        accuracy = (correct / total * 100) if total > 0 else 0
+        
+        return {
+            'total_questions': total,
+            'correct_answers': correct,
+            'accuracy': accuracy,
+            'active_days': result['active_days'] or 0,
+            'quiz_count': quiz_result['quiz_count'] or 0
+        }
+
+
     def get_user_stats(self, user_id: int) -> dict:
         """الحصول على إحصائيات المستخدم الكاملة"""
         conn = self.db.get_connection()

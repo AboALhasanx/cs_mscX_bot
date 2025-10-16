@@ -1,68 +1,49 @@
 """
-ثوابت المواد والفصول
+ثوابت المواد - نسخة محدثة مع تفاصيل كاملة
 """
 
 SUBJECTS = {
     'ai': {
         'name_ar': 'الذكاء الاصطناعي',
         'name_en': 'Artificial Intelligence',
+        'name_short': 'AI',
         'emoji': '🤖',
-        'chapters': {
-            'ch1': 'الفصل 1: Definitions',
-            'ch2': 'الفصل 2: Propositional & Predicate Logic',
-            'ch3': 'الفصل 3: Search Algorithms',
-            'ch4': 'الفصل 4: Heuristic Search'
-        }
+        'description': 'مفاهيم الذكاء الاصطناعي والخوارزميات الذكية'
     },
     'networks': {
         'name_ar': 'شبكات الحاسوب',
         'name_en': 'Computer Networks',
+        'name_short': 'Networks',
         'emoji': '📡',
-        'chapters': {
-            'ch1': 'الفصل 1: Network Fundamentals',
-            'ch2': 'الفصل 2: OSI & TCP/IP',
-            'ch10': 'الفصل 10: Error Detection'
-        }
+        'description': 'بروتوكولات الشبكات والاتصالات'
     },
     'oop': {
         'name_ar': 'البرمجة كائنية التوجه',
         'name_en': 'Object-Oriented Programming',
+        'name_short': 'OOP',
         'emoji': '👨‍💻',
-        'chapters': {
-            'ch5': 'الفصل 5: Classes',
-            'ch8': 'الفصل 8: Inheritance',
-            'ch9': 'الفصل 9: Polymorphism'
-        }
+        'description': 'مفاهيم OOP والتصميم الكائني'
     },
     'se': {
         'name_ar': 'هندسة البرمجيات',
         'name_en': 'Software Engineering',
+        'name_short': 'SE',
         'emoji': '🛠',
-        'chapters': {
-            'ch1': 'الفصل 1: Introduction',
-            'ch2': 'الفصل 2: Software Processes',
-            'ch7': 'الفصل 7: Design & Implementation'
-        }
+        'description': 'دورة حياة البرمجيات والتصميم'
     },
     'ds_algo': {
         'name_ar': 'هياكل البيانات والخوارزميات',
         'name_en': 'Data Structures & Algorithms',
+        'name_short': 'DS & Algo',
         'emoji': '📊',
-        'chapters': {
-            'ch3': 'الفصل 3: Arrays & Linked Lists',
-            'ch5': 'الفصل 5: Stacks & Queues',
-            'ch7': 'الفصل 7: Trees'
-        }
+        'description': 'هياكل البيانات الأساسية والمتقدمة'
     },
     'os': {
         'name_ar': 'نظم التشغيل',
         'name_en': 'Operating Systems',
+        'name_short': 'OS',
         'emoji': '⚙️',
-        'chapters': {
-            'ch3': 'الفصل 3: Processes',
-            'ch5': 'الفصل 5: CPU Scheduling',
-            'ch6': 'الفصل 6: Synchronization'
-        }
+        'description': 'مفاهيم نظم التشغيل والجدولة'
     }
 }
 
@@ -74,8 +55,18 @@ def get_subject_emoji(subject_key: str) -> str:
     """الحصول على emoji المادة"""
     return SUBJECTS.get(subject_key, {}).get('emoji', '📚')
 
-def get_chapter_name(subject_key: str, chapter_key: str) -> str:
-    """الحصول على اسم الفصل"""
+def get_subject_name_en(subject_key: str) -> str:
+    """الحصول على اسم المادة بالإنجليزية"""
+    return SUBJECTS.get(subject_key, {}).get('name_en', 'Unknown')
+
+def get_subject_short(subject_key: str) -> str:
+    """الحصول على الاسم المختصر"""
+    return SUBJECTS.get(subject_key, {}).get('name_short', subject_key.upper())
+
+def get_subject_full_name(subject_key: str) -> str:
+    """الحصول على الاسم الكامل (عربي + إنجليزي)"""
     subject = SUBJECTS.get(subject_key, {})
-    chapters = subject.get('chapters', {})
-    return chapters.get(chapter_key, 'غير معروف')
+    name_ar = subject.get('name_ar', 'غير معروف')
+    name_en = subject.get('name_en', 'Unknown')
+    emoji = subject.get('emoji', '📚')
+    return f"{emoji} {name_ar} ({name_en})"

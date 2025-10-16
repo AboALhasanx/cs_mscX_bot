@@ -16,6 +16,7 @@ class User:
     join_date: datetime
     total_questions: int = 0
     correct_answers: int = 0
+    xp: int = 0  # ← إضافة XP
     
     @property
     def accuracy(self) -> float:
@@ -23,7 +24,12 @@ class User:
         if self.total_questions == 0:
             return 0.0
         return (self.correct_answers / self.total_questions) * 100
-
+    
+    @property
+    def level_info(self) -> dict:
+        """الحصول على معلومات المستوى"""
+        from config import get_level_from_xp
+        return get_level_from_xp(self.xp)
 @dataclass
 class QuizSession:
     """نموذج جلسة الاختبار"""

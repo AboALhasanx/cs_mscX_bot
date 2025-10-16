@@ -110,3 +110,60 @@ async def progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += "✅ ممتاز (80%+) | 🔄 جيد (60%+) | 📝 يحتاج تحسين\n"
     
     await update.message.reply_text(message)
+
+async def level_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    معالج أمر /level
+    عرض معلومات المستوى والتقدم
+    """
+    user_id = update.effective_user.id
+    
+    # الحصول على المستخدم
+    user = user_repo.get_user(user_id)
+    if not user:
+        await update.message.reply_html(
+            "❌ <b>لم تبدأ أي اختبار بعد!</b>\n"
+            "استخدم /start للبدء"
+        )
+        return
+    
+    # معلومات المستوى
+    level_info = config.get_level_from_xp(user.xp)
+    
+    if 'max_level' in level_info:
+        # أعلى مستوى
+        message = f"""
+<b>🏆 أعلى مستوى!</b>
+
+{level_info['emoji']} <b>المستوى {level_info['level']}: {level_info['name']}</b>
+
+• XP الكلي: <b>{level_info['xp_current']:,}</b>
+• الأسئلة المحلولة: <b>{user.total_questions}</b>
+• الدقة: <b>{user.accuracy:.1f}%</b>
+
+<i>أنت وصلت لقمة النجاح! 👑</i>
+"""
+    else:
+        # مستوى عادي
+        progress_bar_length = 10
+        filled = int(level_info['progress_percent'] / 10)
+        empty = progress_bar_length - filled
+        progress_bar = "━" * filled + "░" * empty
+        
+        message = f"""
+<b>{level_info['emoji']} المستوى {level_info['level']}: {level_info['name']}</b>
+
+{progress_bar} {level_info['progress_percent']}%
+
+• XP: <b>{level_info['xp_in_level']:,} / {level_info['xp_needed']:,}</b>
+• XP المتبقي: <b>{level_info['xp_needed'] - level_info['xp_in_level']:,}</b>
+• الأسئلة المحلولة: <b>{user.total_questions}</b>
+• الدقة: <b>{user.accuracy:.1f}%</b>
+
+<b>المستوى التالي:</b>
+{level_info['next_level_emoji']} <b>{level_info['next_level_name']}</b> (المستوى {level_info['level'] + 1})
+
+<i>{config.get_random_motivational_message()}</i>
+"""
+    
+    await update.message.reply_html(message)

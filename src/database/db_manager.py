@@ -48,9 +48,18 @@ class DatabaseManager:
                 first_name TEXT NOT NULL,
                 join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 total_questions INTEGER DEFAULT 0,
-                correct_answers INTEGER DEFAULT 0
+                correct_answers INTEGER DEFAULT 0,
+                xp INTEGER DEFAULT 0
             )
         ''')
+        
+        # إضافة عمود XP للمستخدمين القدامى (إذا لم يكن موجود)
+        try:
+            cursor.execute('ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0')
+            logger.info("✅ تم إضافة عمود XP لجدول users")
+        except sqlite3.OperationalError:
+            # العمود موجود مسبقاً
+            pass
         
         # جدول جلسات الاختبارات
         cursor.execute('''
